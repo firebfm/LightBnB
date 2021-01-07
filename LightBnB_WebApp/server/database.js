@@ -20,16 +20,19 @@ pool.connect();
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function(email) {
-  let user;
-  for (const userId in users) {
-    user = users[userId];
-    if (user.email.toLowerCase() === email.toLowerCase()) {
-      break;
-    } else {
-      user = null;
+  const queryString = `
+  SELECT * 
+  FROM users
+  WHERE email = $1;
+  `;
+  return pool.query(queryString, [email])
+  .then(res => {
+    if (res.rows.length > 0) {
+      return res.rows[0];
     }
-  }
-  return Promise.resolve(user);
+    return null;
+  })
+  .catch(err => console.error('query error', err));
 }
 exports.getUserWithEmail = getUserWithEmail;
 
@@ -39,7 +42,19 @@ exports.getUserWithEmail = getUserWithEmail;
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithId = function(id) {
-  return Promise.resolve(users[id]);
+  const queryString = `
+  SELECT * 
+  FROM users
+  WHERE id = $1;
+  `;
+  return pool.query(queryString, [id])
+  .then(res => {
+    if (res.rows.length > 0) {
+      return res.rows[0];
+    }
+    return null;
+  })
+  .catch(err => console.error('query error', err));
 }
 exports.getUserWithId = getUserWithId;
 
@@ -50,10 +65,16 @@ exports.getUserWithId = getUserWithId;
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser =  function(user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const queryString = `
+  INSERT INTO users (name, email, password)
+  VALUES($1, $2, $3)
+  RETURNING *;
+  `;
+  return pool.query(queryString, [user.name, user.email, user.password])
+  .then(res => {
+    return res.rows[0];
+  })
+  .catch(err => console.error('query error', err));
 }
 exports.addUser = addUser;
 
@@ -83,12 +104,6 @@ const getAllProperties = function(options, limit = 10) {
     LIMIT $1
     `, [limit])
     .then(res => res.rows);
-
-  // const limitedProperties = {};
-  // for (let i = 1; i <= limit; i++) {
-  //   limitedProperties[i] = properties[i];
-  // }
-  // return Promise.resolve(limitedProperties);
 }
 exports.getAllProperties = getAllProperties;
 
